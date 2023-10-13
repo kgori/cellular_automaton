@@ -9,20 +9,42 @@
 #include <map>
 #include <utility>
 #include <vector>
+#include <SFML/Window/Event.hpp>
 
-#define CAVEGEN
-#undef GAMEOFLIFE
+#undef CAVEGEN
+#define GAMEOFLIFE
+
+using Coord = std::pair<unsigned int, unsigned int>;
+using CoordVec = std::vector<Coord>;
 
 class Grid {
 public:
     Grid(unsigned int height, unsigned int width)
-            : height_(height), width_(width) {
+            : height_(height), width_(width), paused_(true) {
 
         data_.resize(width * height, 0);
         counts_.resize(width * height, 0);
 
         build_map();
+    }
 
+    bool isPaused() const {
+        return paused_;
+    }
+
+    void handleInputs(const std::vector<sf::Event>& events, float cellWidth, float cellHeight) {
+        for (auto &event : events) {
+            if (event.type == sf::Event::MouseButtonPressed) {
+                if (event.mouseButton.button == sf::Mouse::Left) {
+                    unsigned int x = floor(static_cast<float>(event.mouseButton.x) / cellWidth);
+                    unsigned int y = floor(static_cast<float>(event.mouseButton.y) / cellHeight);
+                    toggle(x, y);
+                }
+                else if (event.mouseButton.button == sf::Mouse::Right) {
+                    paused_ = !paused_;
+                }
+            }
+        }
     }
 
     friend void swap(Grid &a, Grid &b) {
@@ -50,6 +72,11 @@ public:
                 counts_[ix] -= 1;
             }
         }
+    }
+
+    /// TODO: Somewhere I mixed up the meaning of x and y - fix this
+    void toggle(unsigned int y, unsigned int x) {
+        data_[xy_to_index(x, y)] == 0 ? set(x, y) : unset(x, y);
     }
 
     void regenerate_neighbour_counts() {
@@ -151,6 +178,7 @@ public:
 
 private:
     unsigned int width_, height_;
+    bool paused_;
     std::vector<int> data_, counts_;
     std::map<unsigned int, std::vector<unsigned int>> neighbours_;
 

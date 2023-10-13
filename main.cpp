@@ -1,9 +1,9 @@
 #include "grid.h"
 #include "sfml_renderer.h"
 #include <random>
-
-const int H = 256;
-const int W = 384;
+#include <SFML/System/Clock.hpp>
+const int H = 96;
+const int W = 144;
 
 int main() {
 
@@ -11,26 +11,33 @@ int main() {
     auto rng = std::mt19937(rd());
 
     auto g = Grid(H, W);
-    for (int i = 0; i < 6*H*W/10; ++i) {
+    for (int i = 0; i < 6*H*W/240; ++i) {
         int x = std::uniform_int_distribution(0, H-1)(rng);
         int y = std::uniform_int_distribution(0, W-1)(rng);
         g.set(x, y);
     }
 
-//    auto n_updated = 10000;
-//    auto max_iter = 100;
-//    while (n_updated > 0 && max_iter-- > 0) {
-//        n_updated = g.update();
-//        //g.print_values();
-//    }
+    auto renderer = SFMLRenderer(1440, 960, W, H);
 
-    auto renderer = SFMLRenderer(1600, 1200, W, H);
+    sf::Clock clock;
+    const float fixedTimeStep = 0.1f; // Desired time step in seconds
+    float accumulatedTime = 0.0f;
+
     while (renderer.isWindowOpen()) {
-        renderer.update(g);
-        g.update();
+        float deltaTime = clock.restart().asSeconds();
+        accumulatedTime += deltaTime;
+
+        auto inputs = renderer.collectUserInputs(g);
+        auto [cell_width, cell_height] = renderer.cellSize();
+        g.handleInputs(inputs, cell_width, cell_height);
+        while (accumulatedTime >= fixedTimeStep) {
+            if (!g.isPaused()) {
+                g.update();
+            }
+            accumulatedTime -= fixedTimeStep;
+        }
+        renderer.draw(g);
     }
-
-
 
     return 0;
 }
